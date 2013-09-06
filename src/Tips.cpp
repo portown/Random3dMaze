@@ -24,26 +24,6 @@ int Mes( LPCTSTR lpText, LPCTSTR lpCaption, UINT uType, HWND hWnd )
   return MessageBox( hWnd, lpText, lpCaption, uType );
 }
 
-// カレントディレクトリの修正
-bool CngCurDir( void )
-{
-  TCHAR sztName[MAX_PATH];
-  TCHAR *lpDir;
-
-  if ( !GetModuleFileName( NULL, sztName, MAX_PATH ) )
-    return false;
-
-  if ( !( lpDir = _tcsrchr( sztName, _T('\\') ) ) )
-    return false;
-
-  lstrcpy( lpDir, _T("") );
-
-  if ( !SetCurrentDirectory( sztName ) )
-    return false;
-
-  return true;
-}
-
 // バッファの初期化
 void InitSurface( HDC &hDC, HBITMAP &hBm, int w, int h )
 {

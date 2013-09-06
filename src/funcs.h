@@ -12,7 +12,6 @@
 
 // Tips.cpp
 int Mes( LPCTSTR = NULL, LPCTSTR = NULL, UINT = MB_OK, HWND = NULL );
-bool CngCurDir( void );
 void InitSurface( HDC &, HBITMAP &, int, int );
 void RelsSurface( HDC &, HBITMAP & );
 void PaintRect( HDC, RECT, COLORREF );

@@ -42,8 +42,6 @@ int WINAPI WinMain( HINSTANCE hCurInst, HINSTANCE, LPSTR, int nCmd )
 {
   CreateMutex( NULL, FALSE, CLSNAME );
 
-  if ( !CngCurDir() ) return 0;
-
   if ( !InitApp( hCurInst ) ) return 0;
   if ( !InitInstance( hCurInst, nCmd ) ) return 0;
   if ( !InitGame() ) return 0;
