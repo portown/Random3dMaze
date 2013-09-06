@@ -25,6 +25,7 @@ app = env.Program('Random3dMaze', [
   'src/main.cpp',
   'src/game.cpp',
   'src/Tips.cpp',
+  env.RES('src/3maze.rc'),
 ])
 
 
