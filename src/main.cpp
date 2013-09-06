@@ -1,11 +1,16 @@
 // main.cpp
 
-#define MAIN_DECLARE
-
-// 結合
-#include "common.h"
-
+#include <time.h>
+#include <windows.h>
 #include <tchar.h>
+
+#include "resource.h"
+#include "structs.h"
+#include "funcs.h"
+
+#define MAIN_DECLARE
+#include "vars.h"
+#undef MAIN_DECLARE
 
 #ifdef __MINGW32__
 #undef MAKEINTRESOURCE

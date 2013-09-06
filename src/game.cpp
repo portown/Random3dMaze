@@ -1,9 +1,13 @@
 // game.cpp
 
-// 結合
-#include "common.h"
-
+#include <time.h>
+#include <windows.h>
 #include <tchar.h>
+
+#include "resource.h"
+#include "structs.h"
+#include "funcs.h"
+#include "vars.h"
 
 #define LEFT(pt) ( (pt).x == -1 && (pt).y == 0 )
 #define FRONT(pt) ( (pt).x == 0 && (pt).y == -1 )

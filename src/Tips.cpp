@@ -1,7 +1,13 @@
 // Tips.cpp
 
-// 結合
-#include "common.h"
+#include <time.h>
+#include <windows.h>
+#include <tchar.h>
+
+#include "resource.h"
+#include "structs.h"
+#include "funcs.h"
+#include "vars.h"
 
 // 関数のプロトタイプ宣言
 HPALETTE SetPalette( LPBITMAPINFOHEADER );
