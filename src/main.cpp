@@ -16,6 +16,11 @@
 #define CLSNAME _T("3DMAZE")
 #define WNDNAME _T("3D迷路")
 
+#define ID_FORW 100
+#define ID_LEFT 101
+#define ID_RIGHT 102
+#define ID_BACK 103
+
 // 関数の宣言
 LRESULT CALLBACK WndProc( HWND, UINT, WPARAM, LPARAM );
 BOOL InitApp( HINSTANCE );

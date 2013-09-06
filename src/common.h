@@ -13,7 +13,6 @@
 #include <windows.h>
 
 #include "resource.h"
-#include "defines.h"
 #include "structs.h"
 #include "funcs.h"
 #include "vars.h"

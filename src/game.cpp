@@ -5,6 +5,11 @@
 
 #include <tchar.h>
 
+#define LEFT(pt) ( (pt).x == -1 && (pt).y == 0 )
+#define FRONT(pt) ( (pt).x == 0 && (pt).y == -1 )
+#define RIGHT(pt) ( (pt).x == 1 && (pt).y == 0 )
+#define BACK(pt) ( (pt).x == 0 && (pt).y == 1 )
+
 HDC hMini;
 HBITMAP hMnBm;
 
