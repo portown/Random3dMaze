@@ -14,18 +14,16 @@
 // 外部変数の宣言
 // ==============================================
 
-EX HBITMAP hBkBm, hWallBm, hOkBm, hNaBm, hMeBm;	// ビットマップハンドル
-EX HWND ghWnd;			// グローバルウィンドウハンドル
-EX HDC hBk, hWall;	// デバイスコンテキスト
+EX HWND ghWnd;          // グローバルウィンドウハンドル
 
-EX int mapw, maph;		// マップの幅と高さ
-EX unsigned char *map;	// マップデータ
-EX bool bMMap;			// ミニマップ表示フラグ
+EX int mapw, maph;      // マップの幅と高さ
+EX unsigned char *map;  // マップデータ
+EX bool bMMap;          // ミニマップ表示フラグ
 
-EX PLAYER pl;			// プレイヤー情報
+EX PLAYER pl;           // プレイヤー情報
 
-EX int nmap;			// マップ呼び出し回数
-EX int nkey;			// キー押下回数
+EX int nmap;            // マップ呼び出し回数
+EX int nkey;            // キー押下回数
 
 
 #endif

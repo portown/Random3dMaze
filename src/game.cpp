@@ -9,21 +9,29 @@
 #include "funcs.h"
 #include "vars.h"
 
-#define LEFT(pt) ( (pt).x == -1 && (pt).y == 0 )
-#define FRONT(pt) ( (pt).x == 0 && (pt).y == -1 )
-#define RIGHT(pt) ( (pt).x == 1 && (pt).y == 0 )
-#define BACK(pt) ( (pt).x == 0 && (pt).y == 1 )
 
-HDC hMini;
-HBITMAP hMnBm;
+namespace
+{
+  constexpr auto LEFT(POINT const& pt) { return pt.x == -1 && pt.y == 0; }
+  constexpr auto FRONT(POINT const& pt) { return pt.x == 0 && pt.y == -1; }
+  constexpr auto RIGHT(POINT const& pt) { return pt.x == 1 && pt.y == 0; }
+  constexpr auto BACK(POINT const& pt) { return pt.x == 0 && pt.y == 1; }
 
-// 関数のプロトタイプ宣言
-bool CreateMap( void );
+  constexpr auto MINIX = 256 + 48 * 2;
+  constexpr auto MINIY = 48;
 
+  HDC hBk;
+  HBITMAP hBkBm;
 
-// ==============================================
-// 実装
-// ==============================================
+  HDC hWall;
+  HBITMAP hWallBm;
+
+  HDC hMini;
+  HBITMAP hMnBm;
+
+  bool CreateMap();
+}
+
 
 // ゲームの初期化
 bool InitGame( void )
@@ -70,62 +78,6 @@ bool InitGame( void )
   return true;
 }
 
-// マップ作成
-bool CreateMap( void )
-{
-  int i, j, tmp;
-
-  mapw = 23;
-  maph = 23;
-  map = new unsigned char [mapw * maph];
-  FillMemory( map, mapw * maph, MI_WALL );
-
-  for ( i = 2; i < ( maph - 2 ); ++i )
-  {
-    for ( j = 2; j < ( mapw - 2 ); ++j )
-    {
-      if ( i % 2 && j % 2 ) continue;
-      map[j + i * mapw] = MI_NOTHING;
-    }
-  }
-
-  for ( i = 3; i < ( maph - 3 ); i += 2 )
-  {
-    tmp = rand() % 2;
-    if ( tmp == 0 )
-    {
-      tmp = ( rand() % 2 ? 1 : -1 );
-      map[3 + tmp + i * mapw] = MI_WALL;
-    }
-    else
-    {
-      tmp = ( rand() % 2 ? 1 : -1 );
-      map[3 + ( i + tmp ) * mapw] = MI_WALL;
-    }
-  }
-
-  for ( i = 5; i < ( mapw - 3 ); i += 2 )
-  {
-    for ( j = 3; j < ( maph - 3 ); j += 2 )
-    {
-      tmp = rand() % 2;
-      if ( tmp == 0 )
-      {
-        map[i + 1 + j * mapw] = MI_WALL;
-      }
-      else
-      {
-        tmp = ( rand() % 2 ? 1 : -1 );
-        map[i + ( j + tmp ) * mapw] = MI_WALL;
-      }
-    }
-  }
-
-  return true;
-}
-
-#define MINIX ( 256 + 48 * 2 )
-#define MINIY 48
 // メイン描画
 void Draw( HDC hDC )
 {
@@ -417,6 +369,59 @@ void Goal( void )
 }
 
 
-// EOF
+namespace
+{
+  // マップ作成
+  bool CreateMap()
+  {
+    int i, j, tmp;
 
+    mapw = 23;
+    maph = 23;
+    map = new unsigned char [mapw * maph];
+    FillMemory( map, mapw * maph, MI_WALL );
 
+    for ( i = 2; i < ( maph - 2 ); ++i )
+    {
+      for ( j = 2; j < ( mapw - 2 ); ++j )
+      {
+        if ( i % 2 && j % 2 ) continue;
+        map[j + i * mapw] = MI_NOTHING;
+      }
+    }
+
+    for ( i = 3; i < ( maph - 3 ); i += 2 )
+    {
+      tmp = rand() % 2;
+      if ( tmp == 0 )
+      {
+        tmp = ( rand() % 2 ? 1 : -1 );
+        map[3 + tmp + i * mapw] = MI_WALL;
+      }
+      else
+      {
+        tmp = ( rand() % 2 ? 1 : -1 );
+        map[3 + ( i + tmp ) * mapw] = MI_WALL;
+      }
+    }
+
+    for ( i = 5; i < ( mapw - 3 ); i += 2 )
+    {
+      for ( j = 3; j < ( maph - 3 ); j += 2 )
+      {
+        tmp = rand() % 2;
+        if ( tmp == 0 )
+        {
+          map[i + 1 + j * mapw] = MI_WALL;
+        }
+        else
+        {
+          tmp = ( rand() % 2 ? 1 : -1 );
+          map[i + ( j + tmp ) * mapw] = MI_WALL;
+        }
+      }
+    }
+
+    return true;
+  }
+}

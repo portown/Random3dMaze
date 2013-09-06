@@ -11,7 +11,7 @@ if debug:
 else:
   env.Append(CCFLAGS = ['-O3', '-march=native', '-DNDEBUG', '-D_NDEBUG'])
 
-env.Append(CCFLAGS = ['-pipe', '-Wall', '-Wextra', '-pedantic-errors', '-std=c++11'])
+env.Append(CCFLAGS = ['-pipe', '-Wall', '-Wextra', '-pedantic-errors', '-std=c++1y'])
 
 env.Append(CCFLAGS = ['-DUNICODE', '-D_UNICODE'])
 env.Append(LINKFLAGS = ['-mwindows'])
