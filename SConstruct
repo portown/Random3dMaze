@@ -23,10 +23,9 @@ env.Append(LIBPATH = [os.path.join(boost_root, 'lib')])
 
 app = env.Program('Random3dMaze', [
   'src/main.cpp',
-  'src/game.cpp',
-  'src/Tips.cpp',
-  env.RES('src/3maze.rc'),
+  env.RES('res/main.rc'),
 ])
+Default(app)
 
 
 test_env = env.Clone()
@@ -34,4 +33,5 @@ test_env.Append(LIBS = ['boost_unit_test_framework'])
 test = test_env.Program('test', [
   'test/main.cpp',
 ])
-test_env.AlwaysBuild(test_env.Alias('check', test, test[0].abspath))
+test_env.Alias('check', test, test[0].abspath)
+Clean(all, test)
