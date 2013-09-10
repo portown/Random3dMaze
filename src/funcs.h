@@ -20,6 +20,12 @@ int Load_Bmp( HDC, const TCHAR * );
 
 // game.cpp
 bool InitGame( void );
+void ReleaseGame();
+void turnLeft();
+void moveForward();
+void turnRight();
+void turnBack();
+void toggleMap();
 void Draw( HDC );
 void DrawWall( void );
 void Goal( void );

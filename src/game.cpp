@@ -20,6 +20,16 @@ namespace
   constexpr auto MINIX = 256 + 48 * 2;
   constexpr auto MINIY = 48;
 
+  unsigned char* map;  // マップデータ
+  int mapw, maph;      // マップの幅と高さ
+
+  PLAYER pl;           // プレイヤー情報
+
+  bool bMMap;          // ミニマップ表示フラグ
+
+  int nmap;            // マップ呼び出し回数
+  int nkey;            // キー押下回数
+
   HDC hBk;
   HBITMAP hBkBm;
 
@@ -73,14 +83,73 @@ bool InitGame( void )
   nmap = 0;
 
   DrawWall();
-  InvalidateRect( ghWnd, NULL, FALSE );
 
   return true;
 }
 
+void ReleaseGame()
+{
+  RelsSurface( hMini, hMnBm );
+  delete [] map;
+  RelsSurface( hWall, hWallBm );
+  RelsSurface( hBk, hBkBm );
+}
+
+
+auto turnLeft() -> void
+{
+  auto const tmp = pl.dp.x;
+  pl.dp.x = pl.dp.y;
+  pl.dp.y = -tmp;
+  ++nkey;
+  DrawWall();
+}
+
+auto moveForward() -> void
+{
+  if ( map[pl.x + pl.dp.x + ( pl.y + pl.dp.y ) * mapw] == MI_WALL )
+    return;
+
+  pl.x += pl.dp.x;
+  pl.y += pl.dp.y;
+  if ( pl.x < 0 ) pl.x = 0;
+  if ( pl.x > ( mapw - 1 ) ) pl.x = mapw - 1;
+  if ( pl.y < 0 ) pl.y = 0;
+  if ( pl.y > ( maph - 1 ) ) pl.y = maph - 1;
+  ++nkey;
+  DrawWall();
+}
+
+auto turnRight() -> void
+{
+  auto const tmp = pl.dp.y;
+  pl.dp.y = pl.dp.x;
+  pl.dp.x = -tmp;
+  ++nkey;
+  DrawWall();
+}
+
+auto turnBack() -> void
+{
+  pl.dp.x = -pl.dp.x;
+  pl.dp.y = -pl.dp.y;
+  ++nkey;
+  DrawWall();
+}
+
+auto toggleMap() -> void
+{
+  bMMap = !bMMap;
+  --nkey;
+  ++nmap;
+}
+
+
 // メイン描画
 void Draw( HDC hDC )
 {
+  if (!map) return;
+
   Rectangle( hDC, 48 - 1, 48 - 1, 256 + 48 + 1, 256 + 48 + 1 );
   BitBlt( hDC, 48, 48, 256, 256, hBk, 0, 0, SRCCOPY );
 

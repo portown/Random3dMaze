@@ -36,9 +36,12 @@ auto WINAPI WinMain( HINSTANCE hCurInst, HINSTANCE, LPSTR, int nCmd ) -> int
 
   if ( !InitApp( hCurInst ) ) return 0;
   if ( !InitInstance( hCurInst, nCmd ) ) return 0;
-  if ( !InitGame() ) return 0;
 
-  return Run();
+  auto const result = Run();
+
+  ReleaseGame();
+
+  return result;
 }
 
 
@@ -96,6 +99,9 @@ namespace
     ShowWindow( hWnd, nCmd );
     UpdateWindow( hWnd );
 
+    if ( !InitGame() ) return FALSE;
+    InvalidateRect(hWnd, NULL, FALSE);
+
     return TRUE;
   }
 
@@ -116,17 +122,16 @@ namespace
   // ウィンドウプロシージャ
   LRESULT CALLBACK WndProc( HWND hWnd, UINT msg, WPARAM wp, LPARAM lp )
   {
-    PAINTSTRUCT ps;
-    HDC hDC;
-    int tmp;
-
     switch ( msg )
     {
       case WM_PAINT:
-        hDC = BeginPaint( hWnd, &ps );
-        if ( mapw ) Draw( hDC );
+      {
+        PAINTSTRUCT ps;
+        HDC const hDC = BeginPaint( hWnd, &ps );
+        Draw( hDC );
         EndPaint( hWnd, &ps );
         break;
+      }
 
       case WM_LBUTTONDOWN:
         SetFocus( hWnd );
@@ -136,39 +141,23 @@ namespace
         switch ( wp )
         {
           case VK_LEFT:
-            tmp = pl.dp.x;
-            pl.dp.x = pl.dp.y;
-            pl.dp.y = -tmp;
+            turnLeft();
             break;
 
           case VK_UP:
-            if ( map[pl.x + pl.dp.x + ( pl.y + pl.dp.y ) * mapw] == MI_WALL )
-              break;
-
-            pl.x += pl.dp.x;
-            pl.y += pl.dp.y;
-            if ( pl.x < 0 ) pl.x = 0;
-            if ( pl.x > ( mapw - 1 ) ) pl.x = mapw - 1;
-            if ( pl.y < 0 ) pl.y = 0;
-            if ( pl.y > ( maph - 1 ) ) pl.y = maph - 1;
+            moveForward();
             break;
 
           case VK_RIGHT:
-            tmp = pl.dp.y;
-            pl.dp.y = pl.dp.x;
-            pl.dp.x = -tmp;
+            turnRight();
             break;
 
           case VK_DOWN:
-            pl.dp.x = -pl.dp.x;
-            pl.dp.y = -pl.dp.y;
+            turnBack();
             break;
 
           case 'M':
-            bMMap = !bMMap;
-            InvalidateRect( hWnd, nullptr, TRUE );
-            --nkey;
-            ++nmap;
+            toggleMap();
             break;
 
           case VK_ESCAPE:
@@ -178,13 +167,10 @@ namespace
           default:
             return DefWindowProc( hWnd, msg, wp, lp );
         }
-        ++nkey;
-        DrawWall();
         InvalidateRect( hWnd, nullptr, FALSE );
         break;
 
       case WM_DESTROY:
-        delete [] map;
         PostQuitMessage( 0 );
         break;
 
