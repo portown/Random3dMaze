@@ -2,3 +2,5 @@
 /Random3dMaze.exe
 /test.exe
 *.o
+
+/doc/*.png

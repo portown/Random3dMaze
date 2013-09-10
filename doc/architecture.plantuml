@@ -1,0 +1,90 @@
+@startuml
+
+package random3dmaze {
+
+  package model {
+
+    class field_factory <<(F, red)>> {
+      create() : field
+    }
+
+    class field <<(V, orchid)>> {
+      width() : unsigned int
+      height() : unsigned int
+      point_of_start() : point
+      point_of_goal() : point
+      has_wall_at(point : point) : bool
+    }
+
+    class point <<(V, orchid)>> {
+      horizontal() : int
+      vertical() : int
+    }
+
+    class direction <<(V, orchid)>> {
+      {static} north() : direction
+      {static} south() : direction
+      {static} east() : direction
+      {static} west() : direction
+
+      left() : direction
+      right() : direction
+      back() : direction
+
+      frontOf(point : point) : point
+      leftOf(point : point) : point
+      rightOf(point : point) : point
+      backOf(point : point) : point
+    }
+
+    interface player_observer {
+      sight_changed() : void
+      reached_goal() : void
+      gave_up() : void
+    }
+
+    class player {
+      point() : point
+      direction() : direction
+      go_forward() : void
+      turn_left() : void
+      turn_right() : void
+      turn_backward() : void
+
+      register_observer(observer : player_observer) : void
+      unregister_observer(observer : player_observer) : void
+    }
+
+    field_factory ..> field
+    field ..> point
+    player o-- field
+    player o-- point
+    player o-- direction
+    player o-- player_observer
+    direction ..> point
+  }
+
+  package ui {
+
+    class sight_view {
+      draw() : void
+    }
+
+    class map_view {
+      draw() : void
+    }
+
+    presenter ..> field_factory
+    presenter o-- player
+    presenter ..|> player_observer
+    presenter o-- sight_view
+    presenter o-- map_view
+
+    sight_view o-- field
+    sight_view o-- player
+    map_view o-- field
+    map_view o-- player
+  }
+}
+
+@enduml
