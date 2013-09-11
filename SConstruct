@@ -33,5 +33,6 @@ test_env.Append(LIBS = ['boost_unit_test_framework'])
 test = test_env.Program('test', [
   'test/main.cpp',
   'test/direction_test.cpp',
+  'test/rect_test.cpp',
 ])
 test_env.Alias('check', test, test[0].abspath)
