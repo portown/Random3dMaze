@@ -55,19 +55,19 @@ namespace random3dmaze
       int latitude_;
     };
 
-    constexpr auto operator==(direction const& lhs, direction const& rhs) -> bool
+    inline constexpr auto operator==(direction const& lhs, direction const& rhs) -> bool
     {
       return lhs.longitude_ == rhs.longitude_
         && lhs.latitude_ == rhs.latitude_
         ;
     }
 
-    constexpr auto operator!=(direction const& lhs, direction const& rhs) -> bool
+    inline constexpr auto operator!=(direction const& lhs, direction const& rhs) -> bool
     {
       return !(lhs == rhs);
     }
 
-    auto operator<<(std::ostream& os, direction const& direction) -> std::ostream&
+    inline auto operator<<(std::ostream& os, direction const& direction) -> std::ostream&
     {
       if (direction == direction::north()) os << "north";
       else if (direction == direction::south()) os << "south";

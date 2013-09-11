@@ -28,20 +28,20 @@ namespace random3dmaze
       int y_;
     };
 
-    constexpr auto operator==(point const& lhs, point const& rhs) -> bool
+    inline constexpr auto operator==(point const& lhs, point const& rhs) -> bool
     {
       return lhs.x() == rhs.x()
         && lhs.y() == rhs.y()
         ;
     }
 
-    constexpr auto operator!=(point const& lhs, point const& rhs) -> bool
+    inline constexpr auto operator!=(point const& lhs, point const& rhs) -> bool
     {
       return !(lhs == rhs);
     }
 
 
-    auto operator<<(std::ostream& os, point const& p) -> std::ostream&
+    inline auto operator<<(std::ostream& os, point const& p) -> std::ostream&
     {
       os << "{" << p.x() << ", " << p.y() << "}";
       return os;
