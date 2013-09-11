@@ -17,24 +17,25 @@ package random3dmaze {
     }
 
     class point <<(V, orchid)>> {
-      horizontal() : int
-      vertical() : int
+      {static} from_xy(x : int, y : int) : point
+      x() : int
+      y() : int
     }
 
     class direction <<(V, orchid)>> {
       {static} north() : direction
       {static} south() : direction
-      {static} east() : direction
       {static} west() : direction
+      {static} east() : direction
 
       left() : direction
       right() : direction
       back() : direction
 
-      frontOf(point : point) : point
-      leftOf(point : point) : point
-      rightOf(point : point) : point
-      backOf(point : point) : point
+      front_of(point : point) : point
+      back_of(point : point) : point
+      left_of(point : point) : point
+      right_of(point : point) : point
     }
 
     interface player_observer {
