@@ -23,6 +23,7 @@ env.Append(LIBPATH = [os.path.join(boost_root, 'lib')])
 
 app = env.Program('Random3dMaze', [
   'src/main.cpp',
+  'src/ui/presenter.cpp',
   'src/model/field_factory.cpp',
   env.RES('res/main.rc'),
 ])
