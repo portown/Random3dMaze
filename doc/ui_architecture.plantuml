@@ -1,0 +1,71 @@
+@startuml
+
+namespace random3dmaze {
+  namespace ui {
+    namespace infrastructure {
+      interface application_delegate {
+      }
+
+      abstract class controller {
+        on_create() : void
+        on_foreground() : void
+        on_background() : void
+        on_destroy() : void
+
+        on_create_view() : view
+
+        on_key_event() : void
+      }
+
+      abstract class view {
+        set_frame(frame : rect) : void
+        set_visible(visible : bool) : void
+        on_draw(context : graphics_context) : void
+      }
+
+      class view_container {
+        add_subview(subview : view) : void
+      }
+
+      namespace graphics {
+        class graphics_context {
+          set_color(color : color) : void
+          clear() : void
+          fill_rect(rect : rect) : void
+        }
+
+        class surface {
+        }
+
+        class color {
+        }
+
+        class rect {
+        }
+
+        graphics_context o-- surface
+      }
+
+      application o-- application_delegate
+      application o-- controller
+      application ..> graphics.graphics_context
+
+      controller o-- view
+      view ..> graphics.graphics_context
+      view_container --|> view
+      view_container o-- view
+    }
+
+    application ..|> infrastructure.application_delegate
+    application ..> main_controller
+
+    main_controller --|> infrastructure.controller
+    main_controller o-- sight_view
+    main_controller o-- map_view
+
+    sight_view --|> infrastructure.view
+    map_view --|> infrastructure.view
+  }
+}
+
+@enduml

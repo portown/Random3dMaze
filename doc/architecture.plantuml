@@ -65,27 +65,12 @@ package random3dmaze {
     direction ..> point
   }
 
-  package ui {
+  package ui
 
-    class sight_view {
-      draw() : void
-    }
-
-    class map_view {
-      draw() : void
-    }
-
-    presenter ..> field_factory
-    presenter o-- player
-    presenter ..|> player_observer
-    presenter o-- sight_view
-    presenter o-- map_view
-
-    sight_view o-- field
-    sight_view o-- player
-    map_view o-- field
-    map_view o-- player
-  }
+  ui ..> field_factory
+  ui o-- player
+  ui ..|> player_observer
+  ui o-- field
 }
 
 @enduml
