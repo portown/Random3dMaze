@@ -1,21 +1,39 @@
 #![windows_subsystem = "windows"]
 
-use std::ptr;
+use render::begin_paint;
+use std::{ffi::c_void, ptr};
 use windows::{
-    core::{w, Result, HSTRING, PCWSTR},
+    core::{w, HSTRING, PCWSTR},
     Win32::{
-        Foundation::{ERROR_ALREADY_EXISTS, FALSE, HANDLE, HINSTANCE, HWND, LPARAM, LRESULT, RECT, WIN32_ERROR, WPARAM},
-        Graphics::Gdi::{BeginPaint, EndPaint, GetStockObject, TextOutW, UpdateWindow, HBRUSH, PAINTSTRUCT, WHITE_BRUSH},
+        Foundation::{
+            ERROR_ALREADY_EXISTS, FALSE, HANDLE, HINSTANCE, HWND, LPARAM, LRESULT, RECT,
+            WIN32_ERROR, WPARAM,
+        },
+        Graphics::Gdi::{GetStockObject, UpdateWindow, HBRUSH, WHITE_BRUSH},
         System::{LibraryLoader::GetModuleHandleW, Threading::CreateMutexW},
         UI::WindowsAndMessaging::{
-            AdjustWindowRectEx, CreateWindowExW, DefWindowProcW, DispatchMessageW,
-            GetClientRect, GetMessageW, LoadImageW, PostQuitMessage, RegisterClassExW,
-            ShowWindow, TranslateMessage, CW_USEDEFAULT, HCURSOR, HICON, HMENU, IDC_ARROW,
-            IMAGE_CURSOR, IMAGE_ICON, LR_DEFAULTSIZE, LR_SHARED, MSG, SW_SHOW, WINDOW_EX_STYLE,
-            WM_DESTROY, WM_PAINT, WNDCLASSEXW, WNDCLASS_STYLES, WS_CAPTION, WS_MINIMIZEBOX, WS_OVERLAPPED, WS_SYSMENU
+            AdjustWindowRectEx, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW,
+            GetMessageW, GetWindowLongPtrW, LoadImageW, MessageBoxW, PostQuitMessage,
+            RegisterClassExW, SetWindowLongPtrW, ShowWindow, TranslateMessage, CREATESTRUCTW,
+            CW_USEDEFAULT, GWLP_USERDATA, HCURSOR, HICON, HMENU, IDC_ARROW, IMAGE_CURSOR,
+            IMAGE_ICON, LR_DEFAULTSIZE, LR_SHARED, MB_OK, MSG, SW_SHOW, WINDOW_EX_STYLE, WM_CREATE,
+            WM_DESTROY, WM_PAINT, WNDCLASSEXW, WNDCLASS_STYLES, WS_CAPTION, WS_MINIMIZEBOX,
+            WS_OVERLAPPED, WS_SYSMENU,
         },
     },
 };
+mod game;
+mod map;
+mod player;
+mod render;
+
+#[derive(thiserror::Error, Debug)]
+enum ApplicationError {
+    #[error(transparent)]
+    WinError(#[from] windows::core::Error),
+    #[error(transparent)]
+    GameError(#[from] game::Error),
+}
 
 fn to_cursor(handle: HANDLE) -> HCURSOR {
     HCURSOR(handle.0)
@@ -25,20 +43,53 @@ fn to_icon(handle: HANDLE) -> HICON {
     HICON(handle.0)
 }
 
+struct WindowData {
+    game: game::Game,
+    error: Option<ApplicationError>,
+}
+
+impl WindowData {
+    fn proc(
+        &mut self,
+        hwnd: HWND,
+        msg: u32,
+        wparam: WPARAM,
+        lparam: LPARAM,
+    ) -> Result<LRESULT, ApplicationError> {
+        match msg {
+            WM_PAINT => {
+                let surface = begin_paint(hwnd);
+                self.game.draw(&surface)?;
+            }
+            WM_DESTROY => unsafe { PostQuitMessage(0) },
+            _ => return Ok(unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }),
+        }
+        Ok(LRESULT(0))
+    }
+
+    fn raise_if_error(self) -> Result<(), ApplicationError> {
+        if let Some(e) = self.error {
+            return Err(e);
+        }
+        Ok(())
+    }
+}
+
 fn main() {
     let result = run();
 
     if let Err(error) = result {
-        error.code().unwrap()
+        let message = HSTRING::from(error.to_string());
+        unsafe { MessageBoxW(HWND::default(), &message, w!("Error"), MB_OK) };
     }
 }
 
-fn run() -> Result<()> {
+fn run() -> Result<(), ApplicationError> {
     let class_name = w!("jp.portown.maze3d");
     _ = unsafe { CreateMutexW(None, FALSE, class_name) }?;
     // When ERROR_ALREADY_EXISTS occurred, CreateMutexW doesn't return Err, do Ok
     if WIN32_ERROR::from_error(&windows::core::Error::from_win32()) == Some(ERROR_ALREADY_EXISTS) {
-        return Ok(())
+        return Ok(());
     }
 
     let instance_handle = HINSTANCE::from(unsafe { GetModuleHandleW(PCWSTR(ptr::null())) }?);
@@ -49,7 +100,7 @@ fn run() -> Result<()> {
             style: WNDCLASS_STYLES(0),
             lpfnWndProc: Some(wnd_proc),
             cbClsExtra: 0,
-            cbWndExtra: 0,
+            cbWndExtra: size_of::<*mut game::Game>() as i32,
             hInstance: instance_handle,
             hIcon: to_icon(LoadImageW(
                 instance_handle,
@@ -96,10 +147,15 @@ fn run() -> Result<()> {
         AdjustWindowRectEx(&mut window_rect, window_style, FALSE, window_ex_style)?;
     }
 
+    let mut window_data = WindowData {
+        game: game::Game::new()?,
+        error: None,
+    };
+
     let hwnd = unsafe {
         CreateWindowExW(
             window_ex_style,
-            w!("jp.portown.maze3d"),
+            class_name,
             w!("3d Maze"),
             window_style,
             CW_USEDEFAULT,
@@ -109,7 +165,7 @@ fn run() -> Result<()> {
             HWND::default(),
             HMENU::default(),
             instance_handle,
-            None,
+            Some(std::ptr::from_mut(&mut window_data) as *mut c_void),
         )?
     };
 
@@ -130,23 +186,34 @@ fn run() -> Result<()> {
         }
     }
 
+    window_data.raise_if_error()?;
+
     Ok(())
 }
 
 extern "system" fn wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
-    match msg {
-        WM_PAINT => unsafe {
-            let mut ps = PAINTSTRUCT::default();
-            let hdc = BeginPaint(hwnd, &mut ps);
-            let mut rc = RECT::default();
-            _ = GetClientRect(hwnd, &mut rc);
-            let s = format!("Client rect: {}x{}", rc.right - rc.left, rc.bottom - rc.top);
-            let hs = HSTRING::from(s);
-            _ = TextOutW(hdc, 0, 0, &hs.as_wide());
-            _ = EndPaint(hwnd, &mut ps);
-        },
-        WM_DESTROY => unsafe { PostQuitMessage(0) },
-        _ => return unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) },
+    if msg == WM_CREATE {
+        unsafe {
+            let cs = (lparam.0 as *const CREATESTRUCTW).as_ref().unwrap();
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA, cs.lpCreateParams as isize);
+        }
+        return LRESULT(0);
     }
-    LRESULT(0)
+
+    let data = unsafe {
+        let p = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+        if p == 0 {
+            return DefWindowProcW(hwnd, msg, wparam, lparam);
+        }
+        (p as *mut WindowData).as_mut().unwrap()
+    };
+
+    match data.proc(hwnd, msg, wparam, lparam) {
+        Ok(r) => r,
+        Err(e) => {
+            data.error = Some(e);
+            _ = unsafe { DestroyWindow(hwnd) };
+            LRESULT(0)
+        }
+    }
 }
