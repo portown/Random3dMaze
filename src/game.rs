@@ -53,7 +53,7 @@ impl Game {
         rand::thread_rng().fill(&mut rng_seed);
         let mut rng = rand_chacha::ChaCha8Rng::from_seed(rng_seed);
 
-        let map = Map::new(&mut rng, 23, 23);
+        let map = Map::new(&mut rng, 21, 21);
         let player = Player {
             x: map.start_x,
             y: map.start_y,
