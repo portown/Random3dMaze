@@ -9,16 +9,21 @@ use windows::{
             ERROR_ALREADY_EXISTS, FALSE, HANDLE, HINSTANCE, HWND, LPARAM, LRESULT, RECT,
             WIN32_ERROR, WPARAM,
         },
-        Graphics::Gdi::{GetStockObject, UpdateWindow, HBRUSH, WHITE_BRUSH},
+        Graphics::Gdi::{GetStockObject, InvalidateRect, UpdateWindow, HBRUSH, WHITE_BRUSH},
         System::{LibraryLoader::GetModuleHandleW, Threading::CreateMutexW},
-        UI::WindowsAndMessaging::{
-            AdjustWindowRectEx, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW,
-            GetMessageW, GetWindowLongPtrW, LoadImageW, MessageBoxW, PostQuitMessage,
-            RegisterClassExW, SetWindowLongPtrW, ShowWindow, TranslateMessage, CREATESTRUCTW,
-            CW_USEDEFAULT, GWLP_USERDATA, HCURSOR, HICON, HMENU, IDC_ARROW, IMAGE_CURSOR,
-            IMAGE_ICON, LR_DEFAULTSIZE, LR_SHARED, MB_OK, MSG, SW_SHOW, WINDOW_EX_STYLE, WM_CREATE,
-            WM_DESTROY, WM_PAINT, WNDCLASSEXW, WNDCLASS_STYLES, WS_CAPTION, WS_MINIMIZEBOX,
-            WS_OVERLAPPED, WS_SYSMENU,
+        UI::{
+            Input::KeyboardAndMouse::{
+                VIRTUAL_KEY, VK_DOWN, VK_ESCAPE, VK_LEFT, VK_M, VK_RIGHT, VK_UP,
+            },
+            WindowsAndMessaging::{
+                AdjustWindowRectEx, CreateWindowExW, DefWindowProcW, DestroyWindow,
+                DispatchMessageW, GetMessageW, GetWindowLongPtrW, LoadImageW, MessageBoxW,
+                PostQuitMessage, RegisterClassExW, SetWindowLongPtrW, ShowWindow, TranslateMessage,
+                CREATESTRUCTW, CW_USEDEFAULT, GWLP_USERDATA, HCURSOR, HICON, HMENU, IDC_ARROW,
+                IMAGE_CURSOR, IMAGE_ICON, LR_DEFAULTSIZE, LR_SHARED, MB_OK, MSG, SW_SHOW,
+                WINDOW_EX_STYLE, WM_CREATE, WM_DESTROY, WM_KEYDOWN, WM_PAINT, WNDCLASSEXW,
+                WNDCLASS_STYLES, WS_CAPTION, WS_MINIMIZEBOX, WS_OVERLAPPED, WS_SYSMENU,
+            },
         },
     },
 };
@@ -61,6 +66,30 @@ impl WindowData {
                 let surface = begin_paint(hwnd);
                 self.game.draw(&surface)?;
             }
+            WM_KEYDOWN => match VIRTUAL_KEY(wparam.0 as u16) {
+                VK_LEFT => {
+                    self.game.turn_left();
+                    _ = unsafe { InvalidateRect(hwnd, None, FALSE) };
+                }
+                VK_UP => {
+                    self.game.move_forward();
+                    _ = unsafe { InvalidateRect(hwnd, None, FALSE) };
+                }
+                VK_RIGHT => {
+                    self.game.turn_right();
+                    _ = unsafe { InvalidateRect(hwnd, None, FALSE) };
+                }
+                VK_DOWN => {
+                    self.game.turn_back();
+                    _ = unsafe { InvalidateRect(hwnd, None, FALSE) };
+                }
+                VK_M => {
+                    self.game.toggle_mini_map();
+                    _ = unsafe { InvalidateRect(hwnd, None, FALSE) };
+                }
+                VK_ESCAPE => _ = unsafe { DestroyWindow(hwnd) },
+                _ => return Ok(unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }),
+            },
             WM_DESTROY => unsafe { PostQuitMessage(0) },
             _ => return Ok(unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }),
         }
