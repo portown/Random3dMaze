@@ -1,14 +1,14 @@
 use rand::Rng;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Tile {
     Floor,
     Wall,
 }
 
 pub struct Map {
-    width: u32,
-    height: u32,
+    pub width: u32,
+    pub height: u32,
     data: Vec<Tile>,
 }
 
@@ -55,5 +55,19 @@ impl Map {
             height,
             data,
         }
+    }
+
+    fn index_of(&self, x: i32, y: i32) -> Option<usize> {
+        if x < 0 || x as u32 >= self.width {
+            return None;
+        }
+        if y < 0 || y as u32 >= self.height {
+            return None;
+        }
+        Some(((x as u32) + (y as u32) * self.width) as usize)
+    }
+
+    pub fn get(&self, x: i32, y: i32) -> Option<Tile> {
+        self.index_of(x, y).map(|i| self.data[i].clone())
     }
 }

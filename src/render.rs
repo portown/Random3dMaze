@@ -3,12 +3,9 @@ use std::ffi::c_void;
 use windows::{
     core::HSTRING,
     Win32::{
-        Foundation::{COLORREF, HWND, RECT},
+        Foundation::{COLORREF, HWND, POINT, RECT},
         Graphics::Gdi::{
-            BeginPaint, BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, CreatePen,
-            CreateSolidBrush, DeleteDC, DeleteObject, EndPaint, GetObjectW, GetStockObject,
-            Rectangle, SelectObject, BITMAP, HBITMAP, HBRUSH, HDC, HPEN, NULL_BRUSH, NULL_PEN,
-            PAINTSTRUCT, PS_SOLID, SRCCOPY,
+            BeginPaint, BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, CreateFontW, CreatePen, CreateSolidBrush, DeleteDC, DeleteObject, EndPaint, GetObjectW, GetStockObject, Polygon, Rectangle, SelectObject, SetTextColor, TextOutW, BITMAP, CLIP_DEFAULT_PRECIS, DEFAULT_CHARSET, DEFAULT_PITCH, DEFAULT_QUALITY, FF_DONTCARE, FW_NORMAL, HBITMAP, HBRUSH, HDC, HFONT, HPEN, NULL_BRUSH, NULL_PEN, OUT_DEFAULT_PRECIS, PAINTSTRUCT, PS_SOLID, SRCCOPY
         },
         System::LibraryLoader::GetModuleHandleW,
         UI::WindowsAndMessaging::{
@@ -24,6 +21,10 @@ pub enum Error {
         file_path: String,
         #[source]
         source: windows::core::Error,
+    },
+    #[error("Cannot create a font named \"{face_name}\"")]
+    FontCreationError {
+        face_name: String
     },
 }
 
@@ -57,6 +58,42 @@ pub fn create_solid_brush(color: COLORREF) -> Brush {
     Brush { handle }
 }
 
+pub struct Font {
+    handle: HFONT,
+}
+
+impl Drop for Font {
+    fn drop(&mut self) {
+        _ = unsafe { DeleteObject(self.handle) };
+    }
+}
+
+pub fn create_font(face_name: &str, size: i32) -> Result<Font, Error> {
+    let handle = unsafe {
+        CreateFontW(
+            size,
+            0,
+            0,
+            0,
+            FW_NORMAL.0 as i32,
+            0,
+            0,
+            0,
+            DEFAULT_CHARSET.0 as u32,
+            OUT_DEFAULT_PRECIS.0 as u32,
+            CLIP_DEFAULT_PRECIS.0 as u32,
+            DEFAULT_QUALITY.0 as u32,
+            (DEFAULT_PITCH.0 | FF_DONTCARE.0) as u32,
+            &HSTRING::from(face_name),
+        )
+    };
+    if handle.is_invalid() {
+        Err(Error::FontCreationError { face_name: face_name.to_owned() })
+    } else {
+        Ok(Font { handle })
+    }
+}
+
 pub trait Surface {
     fn get_hdc(&self) -> HDC;
     fn get_size(&self) -> (u32, u32);
@@ -67,7 +104,7 @@ pub trait Surface {
             let null_pen = GetStockObject(NULL_PEN);
             let old_pen = SelectObject(hdc, null_pen);
             let old_brush = SelectObject(hdc, brush.handle);
-            _ = Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom);
+            _ = Rectangle(hdc, rect.left, rect.top, rect.right + 1, rect.bottom + 1);
             SelectObject(hdc, old_brush);
             SelectObject(hdc, old_pen);
         }
@@ -98,6 +135,26 @@ pub trait Surface {
                 src_y,
                 SRCCOPY,
             );
+        }
+    }
+
+    fn draw_polygon(&self, points: &Vec<POINT>, pen: &Pen, brush: &Brush) {
+        unsafe {
+            let old_pen = SelectObject(self.get_hdc(), pen.handle);
+            let old_brush = SelectObject(self.get_hdc(), brush.handle);
+            _ = Polygon(self.get_hdc(), points);
+            SelectObject(self.get_hdc(), old_brush);
+            SelectObject(self.get_hdc(), old_pen);
+        }
+    }
+
+    fn draw_text(&self, text: &str, x: i32, y: i32, font: &Font, color: COLORREF) {
+        unsafe {
+            let old_font = SelectObject(self.get_hdc(), font.handle);
+            let old_color = SetTextColor(self.get_hdc(), color);
+            _ = TextOutW(self.get_hdc(), x, y, HSTRING::from(text).as_wide());
+            SetTextColor(self.get_hdc(), old_color);
+            SelectObject(self.get_hdc(), old_font);
         }
     }
 }
@@ -209,6 +266,10 @@ impl Drop for BackSurface {
             _ = DeleteDC(self.hdc);
         }
     }
+}
+
+pub fn point(x: i32, y: i32) -> POINT {
+    POINT { x, y }
 }
 
 pub fn rect(left: i32, top: i32, right: i32, bottom: i32) -> RECT {
