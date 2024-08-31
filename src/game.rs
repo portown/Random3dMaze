@@ -5,6 +5,7 @@ use crate::render::{
     RenderTarget,
 };
 use rand::{Rng, SeedableRng};
+use std::fmt::Write;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -26,7 +27,6 @@ struct RenderingData {
 }
 
 pub struct Game {
-    #[allow(unused)]
     rng_seed: <rand_chacha::ChaCha8Rng as rand::SeedableRng>::Seed,
     rng: rand_chacha::ChaCha8Rng,
 
@@ -42,7 +42,8 @@ pub struct Game {
 
     drew_mini_map: bool,
     player_geometry: Geometry,
-    font: Font,
+    seed_font: Font,
+    message_font: Font,
     rendering_data: Option<RenderingData>,
     image_loader: ImageLoader,
 }
@@ -67,7 +68,8 @@ impl Game {
             p.end_figure();
         })?;
 
-        let font = render_context.create_font("MS UI Gothic", 20)?;
+        let seed_font = render_context.create_font("MS Gothic", 12)?;
+        let message_font = render_context.create_font("MS UI Gothic", 20)?;
 
         Ok(Game {
             rng_seed,
@@ -85,7 +87,8 @@ impl Game {
 
             drew_mini_map: false,
             player_geometry,
-            font,
+            seed_font,
+            message_font,
             rendering_data: None,
 
             image_loader: ImageLoader::new()?,
@@ -206,6 +209,20 @@ impl Game {
 
         rt.clear(color_rgb(255, 255, 255));
 
+        rt.draw_text(
+            &format!(
+                "seed: 0x{}",
+                self.rng_seed.iter().fold(String::new(), |mut r, v| {
+                    _ = write!(r, "{v:02X}");
+                    r
+                })
+            ),
+            0,
+            0,
+            &self.seed_font,
+            &r.black_brush,
+        );
+
         rt.draw_rect(&rect_wh(48 - 1, 48 - 1, 256 + 2, 256 + 2), &r.black_brush);
         self.draw_wall(&r);
         rt.copy_from(
@@ -252,13 +269,13 @@ impl Game {
                 "ゴール！　スコア：{}点　リスタート：Enterキー　終了：ESCキー",
                 self.score
             );
-            rt.draw_text(&text, 20, 48 + 256 + 12, &self.font, &r.black_brush);
+            rt.draw_text(&text, 20, 48 + 256 + 12, &self.message_font, &r.black_brush);
         } else {
             rt.draw_text(
                 "移動：矢印キー マップ：Mキー 終了：ESCキー",
                 20,
                 48 + 256 + 12,
-                &self.font,
+                &self.message_font,
                 &r.black_brush,
             );
         }
