@@ -1,23 +1,24 @@
 use crate::map::{Map, Tile};
 use crate::player::Player;
 use crate::render::{
-    color_rgb, create_font, create_solid_brush, create_solid_pen, point, rect, rect_wh,
-    BackSurface, Brush, Font, Pen, PrimarySurface, Surface,
+    color_rgb, point, rect, rect_wh, Bitmap, Brush, Context, Font, Geometry, ImageLoader,
+    RenderTarget,
 };
 use rand::{Rng, SeedableRng};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error(transparent)]
-    IOError(#[from] crate::render::Error),
+    GeneralRenderingError(#[from] crate::render::Error),
+    #[error("An error at the end of drawing")]
+    EndDrawError,
 }
 
 struct RenderingData {
-    map_surface: BackSurface,
-    wall_surface: BackSurface,
-    mini_map_surface: BackSurface,
+    map_surface: RenderTarget,
+    wall_surface: Bitmap,
+    mini_map_surface: RenderTarget,
 
-    black_pen: Pen,
     black_brush: Brush,
     white_brush: Brush,
     start_brush: Brush,
@@ -40,12 +41,14 @@ pub struct Game {
     key_press_count: u32,
 
     drew_mini_map: bool,
+    player_geometry: Geometry,
     font: Font,
     rendering_data: Option<RenderingData>,
+    image_loader: ImageLoader,
 }
 
 impl Game {
-    pub fn new() -> Result<Self, Error> {
+    pub fn new(render_context: &Context) -> Result<Self, Error> {
         let mut rng_seed = <rand_chacha::ChaCha8Rng as rand::SeedableRng>::Seed::default();
         rand::thread_rng().fill(&mut rng_seed);
         let mut rng = rand_chacha::ChaCha8Rng::from_seed(rng_seed);
@@ -57,7 +60,14 @@ impl Game {
             direction: crate::player::Direction::South,
         };
 
-        let font = create_font("MS UI Gothic", 20)?;
+        let player_geometry = render_context.create_geometry(|p| {
+            p.begin_figure(&point(0, (256 / map.height / 2) as i32));
+            p.add_line(&point((256 / map.width) as i32, 0));
+            p.add_line(&point((256 / map.width) as i32, (256 / map.height) as i32));
+            p.end_figure();
+        })?;
+
+        let font = render_context.create_font("MS UI Gothic", 20)?;
 
         Ok(Game {
             rng_seed,
@@ -74,8 +84,11 @@ impl Game {
             key_press_count: 0,
 
             drew_mini_map: false,
+            player_geometry,
             font,
             rendering_data: None,
+
+            image_loader: ImageLoader::new()?,
         })
     }
 
@@ -177,102 +190,66 @@ impl Game {
         self.mini_map_view_count += 1;
     }
 
-    pub fn new_game(&mut self) -> Result<Game, Error> {
-        let mut new = Game::new()?;
+    pub fn new_game(&mut self, render_context: &Context) -> Result<Game, Error> {
+        let mut new = Game::new(render_context)?;
         new.rendering_data = self.rendering_data.take();
         Ok(new)
     }
 
-    pub fn draw(&mut self, surface: &PrimarySurface) -> Result<(), Error> {
+    pub fn draw(&mut self, rt: &RenderTarget) -> Result<(), Error> {
         let r = self
             .rendering_data
             .take()
-            .map_or_else(|| self.create_rendering_data(surface), Ok)?;
+            .map_or_else(|| self.create_rendering_data(rt), Ok)?;
 
-        surface.draw_rect(&rect_wh(48 - 1, 48 - 1, 256 + 2, 256 + 2), &r.black_pen);
+        rt.begin();
+
+        rt.clear(color_rgb(255, 255, 255));
+
+        rt.draw_rect(&rect_wh(48 - 1, 48 - 1, 256 + 2, 256 + 2), &r.black_brush);
         self.draw_wall(&r);
-        surface.copy_from(&rect_wh(48, 48, 256, 256), &r.map_surface, 0, 0);
+        rt.copy_from(
+            &rect_wh(48, 48, 256, 256),
+            &r.map_surface.get_bitmap()?,
+            0,
+            0,
+        );
 
         let mini_map_x = 48 * 2 + 256;
         let mini_map_y = 48;
-        surface.draw_rect(
+        rt.draw_rect(
             &rect_wh(mini_map_x - 1, mini_map_y - 1, 256 + 2, 256 + 2),
-            &r.black_pen,
+            &r.black_brush,
         );
         if self.shows_mini_map {
             if !self.drew_mini_map {
                 self.draw_mini_map(&r);
             }
-            surface.copy_from(
+            rt.copy_from(
                 &rect_wh(mini_map_x, mini_map_y, 256, 256),
-                &r.mini_map_surface,
+                &r.mini_map_surface.get_bitmap()?,
                 0,
                 0,
             );
-            let triangle = match self.player.direction {
-                crate::player::Direction::West => vec![
-                    point(
-                        mini_map_x + (self.player.x * 67 / 6 + 10) as i32,
-                        mini_map_y + (self.player.y * 67 / 6 + 10) as i32,
-                    ),
-                    point(
-                        mini_map_x + (self.player.x * 67 / 6) as i32,
-                        mini_map_y + (self.player.y * 67 / 6 + 5) as i32,
-                    ),
-                    point(
-                        mini_map_x + (self.player.x * 67 / 6 + 10) as i32,
-                        mini_map_y + (self.player.y * 67 / 6) as i32,
-                    ),
-                ],
-                crate::player::Direction::North => vec![
-                    point(
-                        mini_map_x + (self.player.x * 67 / 6 + 5) as i32,
-                        mini_map_y + (self.player.y * 67 / 6) as i32,
-                    ),
-                    point(
-                        mini_map_x + (self.player.x * 67 / 6) as i32,
-                        mini_map_y + (self.player.y * 67 / 6 + 10) as i32,
-                    ),
-                    point(
-                        mini_map_x + (self.player.x * 67 / 6 + 10) as i32,
-                        mini_map_y + (self.player.y * 67 / 6 + 10) as i32,
-                    ),
-                ],
-                crate::player::Direction::East => vec![
-                    point(
-                        mini_map_x + (self.player.x * 67 / 6) as i32,
-                        mini_map_y + (self.player.y * 67 / 6) as i32,
-                    ),
-                    point(
-                        mini_map_x + (self.player.x * 67 / 6 + 10) as i32,
-                        mini_map_y + (self.player.y * 67 / 6 + 5) as i32,
-                    ),
-                    point(
-                        mini_map_x + (self.player.x * 67 / 6) as i32,
-                        mini_map_y + (self.player.y * 67 / 6 + 10) as i32,
-                    ),
-                ],
-                crate::player::Direction::South => vec![
-                    point(
-                        mini_map_x + (self.player.x * 67 / 6 + 5) as i32,
-                        mini_map_y + (self.player.y * 67 / 6 + 10) as i32,
-                    ),
-                    point(
-                        mini_map_x + (self.player.x * 67 / 6) as i32,
-                        mini_map_y + (self.player.y * 67 / 6) as i32,
-                    ),
-                    point(
-                        mini_map_x + (self.player.x * 67 / 6 + 10) as i32,
-                        mini_map_y + (self.player.y * 67 / 6) as i32,
-                    ),
-                ],
+            let angle = match self.player.direction {
+                crate::player::Direction::West => 0.0,
+                crate::player::Direction::North => 90.0,
+                crate::player::Direction::East => 180.0,
+                crate::player::Direction::South => 270.0,
             };
-            surface.draw_polygon(&triangle, &r.black_pen, &r.white_brush);
+            rt.draw_polygon(
+                &self.player_geometry,
+                mini_map_x + (self.player.x * 256 / self.map.width) as i32,
+                mini_map_y + (self.player.y * 256 / self.map.height) as i32,
+                &r.black_brush,
+                &r.white_brush,
+                angle,
+            );
         } else {
-            surface.fill_rect(&rect_wh(mini_map_x, mini_map_y, 256, 256), &r.white_brush);
+            rt.fill_rect(&rect_wh(mini_map_x, mini_map_y, 256, 256), &r.white_brush);
         }
 
-        surface.fill_rect(
+        rt.fill_rect(
             &rect_wh(0, 48 + 256 + 12, 48 * 3 + 256 * 2, 20),
             &r.white_brush,
         );
@@ -281,31 +258,35 @@ impl Game {
                 "ゴール！　スコア：{}点　リスタート：Enterキー　終了：ESCキー",
                 self.score
             );
-            surface.draw_text(&text, 20, 48 + 256 + 12, &self.font, color_rgb(0, 0, 0));
+            rt.draw_text(&text, 20, 48 + 256 + 12, &self.font, &r.black_brush);
         } else {
-            surface.draw_text(
+            rt.draw_text(
                 "移動：矢印キー マップ：Mキー 終了：ESCキー",
                 20,
                 48 + 256 + 12,
                 &self.font,
-                color_rgb(0, 0, 0),
+                &r.black_brush,
             );
         }
 
-        self.rendering_data = Some(r);
+        if rt.end() {
+            self.rendering_data = Some(r);
+        } else {
+            self.rendering_data = None;
+            return Err(Error::EndDrawError);
+        }
 
         Ok(())
     }
 
-    fn create_rendering_data(&mut self, surface: &PrimarySurface) -> Result<RenderingData, Error> {
-        let map_surface = surface.create_surface(256, 256);
-        let wall_surface = surface.load_bitmap("assets\\wall.bmp")?;
-        let mini_map_surface = surface.create_surface(256, 256);
-        let black_pen = create_solid_pen(1, color_rgb(0, 0, 0));
-        let black_brush = create_solid_brush(color_rgb(0, 0, 0));
-        let white_brush = create_solid_brush(color_rgb(255, 255, 255));
-        let start_brush = create_solid_brush(color_rgb(0, 255, 255));
-        let goal_brush = create_solid_brush(color_rgb(255, 0, 0));
+    fn create_rendering_data(&mut self, rt: &RenderTarget) -> Result<RenderingData, Error> {
+        let map_surface = rt.create_new_render_target(256, 256)?;
+        let wall_surface = self.image_loader.load_bitmap("assets\\wall.bmp", &rt)?;
+        let mini_map_surface = rt.create_new_render_target(256, 256)?;
+        let black_brush = rt.create_solid_brush(color_rgb(0, 0, 0))?;
+        let white_brush = rt.create_solid_brush(color_rgb(255, 255, 255))?;
+        let start_brush = rt.create_solid_brush(color_rgb(0, 255, 255))?;
+        let goal_brush = rt.create_solid_brush(color_rgb(255, 0, 0))?;
 
         self.drew_mini_map = false;
 
@@ -313,7 +294,6 @@ impl Game {
             map_surface,
             wall_surface,
             mini_map_surface,
-            black_pen,
             black_brush,
             white_brush,
             start_brush,
@@ -322,6 +302,9 @@ impl Game {
     }
 
     fn draw_wall(&self, r: &RenderingData) {
+        r.map_surface.begin();
+        r.map_surface.clear(color_rgb(0, 0, 0));
+
         r.map_surface
             .copy_from(&rect_wh(0, 0, 256, 256), &r.wall_surface, 0, 0);
 
@@ -406,14 +389,14 @@ impl Game {
             r.map_surface
                 .copy_from(&rect_wh(236, 0, 20, 256), &r.wall_surface, 492, 0)
         }
+
+        r.map_surface.end();
     }
 
     fn draw_mini_map(&mut self, r: &RenderingData) {
+        r.mini_map_surface.begin();
+        r.mini_map_surface.clear(color_rgb(255, 255, 255));
         let surface_size = r.mini_map_surface.get_size();
-        r.mini_map_surface.fill_rect(
-            &rect_wh(0, 0, surface_size.0 as i32, surface_size.1 as i32),
-            &r.white_brush,
-        );
 
         let map_size = (self.map.width, self.map.height);
         let rect_at = |x: u32, y: u32| {
@@ -438,6 +421,8 @@ impl Game {
             .fill_rect(&rect_at(self.map.start_x, self.map.start_y), &r.start_brush);
         r.mini_map_surface
             .fill_rect(&rect_at(self.map.goal_x, self.map.goal_y), &r.goal_brush);
+
+        r.mini_map_surface.end();
 
         self.drew_mini_map = true;
     }
