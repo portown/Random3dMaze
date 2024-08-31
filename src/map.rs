@@ -9,6 +9,10 @@ pub enum Tile {
 pub struct Map {
     pub width: u32,
     pub height: u32,
+    pub start_x: u32,
+    pub start_y: u32,
+    pub goal_x: u32,
+    pub goal_y: u32,
     data: Vec<Tile>,
 }
 
@@ -54,6 +58,10 @@ impl Map {
             width,
             height,
             data,
+            start_x: 2,
+            start_y: 2,
+            goal_x: width - 3,
+            goal_y: height - 3,
         }
     }
 

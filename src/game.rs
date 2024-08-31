@@ -33,10 +33,13 @@ pub struct Game {
     player: Player,
 
     shows_mini_map: bool,
+    is_goal: bool,
+    score: u32,
 
     mini_map_view_count: u32,
     key_press_count: u32,
 
+    drew_mini_map: bool,
     font: Font,
     rendering_data: Option<RenderingData>,
 }
@@ -48,6 +51,11 @@ impl Game {
         let mut rng = rand_chacha::ChaCha8Rng::from_seed(rng_seed);
 
         let map = Map::new(&mut rng, 23, 23);
+        let player = Player {
+            x: map.start_x,
+            y: map.start_y,
+            direction: crate::player::Direction::South,
+        };
 
         let font = create_font("MS UI Gothic", 20)?;
 
@@ -56,19 +64,25 @@ impl Game {
             rng,
 
             map,
-            player: Player::default(),
+            player,
 
             shows_mini_map: false,
+            is_goal: false,
+            score: 0,
 
             mini_map_view_count: 0,
             key_press_count: 0,
 
+            drew_mini_map: false,
             font,
             rendering_data: None,
         })
     }
 
     pub fn turn_left(&mut self) {
+        if self.is_goal {
+            return;
+        }
         use crate::player::Direction;
         self.player.direction = match self.player.direction {
             Direction::West => Direction::South,
@@ -80,6 +94,9 @@ impl Game {
     }
 
     pub fn turn_right(&mut self) {
+        if self.is_goal {
+            return;
+        }
         use crate::player::Direction;
         self.player.direction = match self.player.direction {
             Direction::West => Direction::North,
@@ -91,6 +108,9 @@ impl Game {
     }
 
     pub fn turn_back(&mut self) {
+        if self.is_goal {
+            return;
+        }
         use crate::player::Direction;
         self.player.direction = match self.player.direction {
             Direction::West => Direction::East,
@@ -102,6 +122,9 @@ impl Game {
     }
 
     pub fn move_forward(&mut self) {
+        if self.is_goal {
+            return;
+        }
         use crate::player::Direction;
         let point_diff = match self.player.direction {
             Direction::West => (-1, 0),
@@ -133,11 +156,31 @@ impl Game {
         self.player.x = new_x;
         self.player.y = new_y;
         self.key_press_count += 1;
+
+        if new_x == self.map.goal_x && new_y == self.map.goal_y {
+            self.is_goal = true;
+            self.score = 5000 / self.key_press_count
+                + if self.mini_map_view_count == 0 {
+                    50
+                } else {
+                    10 / self.mini_map_view_count
+                }
+                + self.rng.gen_range(0..30);
+        }
     }
 
     pub fn toggle_mini_map(&mut self) {
+        if self.is_goal {
+            return;
+        }
         self.shows_mini_map = !self.shows_mini_map;
         self.mini_map_view_count += 1;
+    }
+
+    pub fn new_game(&mut self) -> Result<Game, Error> {
+        let mut new = Game::new()?;
+        new.rendering_data = self.rendering_data.take();
+        Ok(new)
     }
 
     pub fn draw(&mut self, surface: &PrimarySurface) -> Result<(), Error> {
@@ -157,6 +200,9 @@ impl Game {
             &r.black_pen,
         );
         if self.shows_mini_map {
+            if !self.drew_mini_map {
+                self.draw_mini_map(&r);
+            }
             surface.copy_from(
                 &rect_wh(mini_map_x, mini_map_y, 256, 256),
                 &r.mini_map_surface,
@@ -226,21 +272,32 @@ impl Game {
             surface.fill_rect(&rect_wh(mini_map_x, mini_map_y, 256, 256), &r.white_brush);
         }
 
-        surface.fill_rect(&rect_wh(20, 48 + 256 + 12, 300, 20), &r.white_brush);
-        surface.draw_text(
-            "移動：矢印キー マップ：Mキー 終了：ESCキー",
-            20,
-            48 + 256 + 12,
-            &self.font,
-            color_rgb(0, 0, 0),
-        );
+        surface.fill_rect(&rect_wh(0, 48 + 256 + 12, 48 * 3 + 256 * 2, 20), &r.white_brush);
+        if self.is_goal {
+            let text = format!("ゴール！　スコア：{}点　リスタート：Enterキー　終了：ESCキー", self.score);
+            surface.draw_text(
+                &text,
+                20,
+                48 + 256 + 12,
+                &self.font,
+                color_rgb(0, 0, 0),
+            );
+        } else {
+            surface.draw_text(
+                "移動：矢印キー マップ：Mキー 終了：ESCキー",
+                20,
+                48 + 256 + 12,
+                &self.font,
+                color_rgb(0, 0, 0),
+            );
+        }
 
         self.rendering_data = Some(r);
 
         Ok(())
     }
 
-    fn create_rendering_data(&self, surface: &PrimarySurface) -> Result<RenderingData, Error> {
+    fn create_rendering_data(&mut self, surface: &PrimarySurface) -> Result<RenderingData, Error> {
         let map_surface = surface.create_surface(256, 256);
         let wall_surface = surface.load_bitmap("assets\\wall.bmp")?;
         let mini_map_surface = surface.create_surface(256, 256);
@@ -250,7 +307,9 @@ impl Game {
         let start_brush = create_solid_brush(color_rgb(0, 255, 255));
         let goal_brush = create_solid_brush(color_rgb(255, 0, 0));
 
-        let r = RenderingData {
+        self.drew_mini_map = false;
+
+        Ok(RenderingData {
             map_surface,
             wall_surface,
             mini_map_surface,
@@ -259,11 +318,7 @@ impl Game {
             white_brush,
             start_brush,
             goal_brush,
-        };
-
-        self.draw_mini_map(&r);
-
-        Ok(r)
+        })
     }
 
     fn draw_wall(&self, r: &RenderingData) {
@@ -353,7 +408,7 @@ impl Game {
         }
     }
 
-    fn draw_mini_map(&self, r: &RenderingData) {
+    fn draw_mini_map(&mut self, r: &RenderingData) {
         let surface_size = r.mini_map_surface.get_size();
         r.mini_map_surface.fill_rect(
             &rect_wh(0, 0, surface_size.0 as i32, surface_size.1 as i32),
@@ -379,9 +434,12 @@ impl Game {
             }
         }
 
-        r.mini_map_surface.fill_rect(&rect_at(2, 2), &r.start_brush);
         r.mini_map_surface
-            .fill_rect(&rect_at(map_size.0 - 3, map_size.1 - 3), &r.goal_brush);
+            .fill_rect(&rect_at(self.map.start_x, self.map.start_y), &r.start_brush);
+        r.mini_map_surface
+            .fill_rect(&rect_at(self.map.goal_x, self.map.goal_y), &r.goal_brush);
+
+        self.drew_mini_map = true;
     }
 }
 

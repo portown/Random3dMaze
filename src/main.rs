@@ -13,7 +13,7 @@ use windows::{
         System::{LibraryLoader::GetModuleHandleW, Threading::CreateMutexW},
         UI::{
             Input::KeyboardAndMouse::{
-                VIRTUAL_KEY, VK_DOWN, VK_ESCAPE, VK_LEFT, VK_M, VK_RIGHT, VK_UP,
+                VIRTUAL_KEY, VK_DOWN, VK_ESCAPE, VK_LEFT, VK_M, VK_RETURN, VK_RIGHT, VK_UP,
             },
             WindowsAndMessaging::{
                 AdjustWindowRectEx, CreateWindowExW, DefWindowProcW, DestroyWindow,
@@ -85,6 +85,10 @@ impl WindowData {
                 }
                 VK_M => {
                     self.game.toggle_mini_map();
+                    _ = unsafe { InvalidateRect(hwnd, None, FALSE) };
+                }
+                VK_RETURN => {
+                    self.game = self.game.new_game()?;
                     _ = unsafe { InvalidateRect(hwnd, None, FALSE) };
                 }
                 VK_ESCAPE => _ = unsafe { DestroyWindow(hwnd) },

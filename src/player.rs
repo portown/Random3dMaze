@@ -23,16 +23,6 @@ impl Player {
     }
 }
 
-impl Default for Player {
-    fn default() -> Self {
-        Player {
-            x: 2,
-            y: 2,
-            direction: Direction::South,
-        }
-    }
-}
-
 impl<'a, 'b> Sight<'a, 'b> {
     pub fn get(&self, forward: u32, horizontal: i32) -> crate::map::Tile {
         let (x_diff, y_diff) = match self.player.direction {
