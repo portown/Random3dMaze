@@ -36,15 +36,15 @@ use windows::{
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error(transparent)]
-    InternalError(windows::core::Error),
+    Internal(windows::core::Error),
     #[error("Cannot load a bitmap from file ({file_path}): {source}")]
-    BitmapLoadError {
+    BitmapLoad {
         file_path: String,
         #[source]
         source: windows::core::Error,
     },
     #[error("Cannot create a font named \"{face_name}\"")]
-    FontCreationError {
+    FontCreation {
         face_name: String,
         #[source]
         source: windows::core::Error,
@@ -61,10 +61,10 @@ pub struct Context {
 impl Context {
     pub fn new() -> Result<Self, Error> {
         let d2d_factory = unsafe { D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, None) }
-            .map_err(|e| Error::InternalError(e))?;
+            .map_err(Error::Internal)?;
 
-        let dwrite_factory = unsafe { DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED) }
-            .map_err(|e| Error::InternalError(e))?;
+        let dwrite_factory =
+            unsafe { DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED) }.map_err(Error::Internal)?;
 
         Ok(Context {
             d2d_factory,
@@ -97,7 +97,7 @@ impl Context {
                 },
             )
         }
-        .map_err(|e| Error::InternalError(e))?;
+        .map_err(Error::Internal)?;
 
         let render_target = RenderTarget::WindowRenderTarget(hwnd_render_target);
 
@@ -114,12 +114,11 @@ impl Context {
         &self,
         creator: F,
     ) -> Result<Geometry, Error> {
-        let geometry = unsafe { self.d2d_factory.CreatePathGeometry() }
-            .map_err(|e| Error::InternalError(e))?;
+        let geometry = unsafe { self.d2d_factory.CreatePathGeometry() }.map_err(Error::Internal)?;
 
-        let sink = unsafe { geometry.Open() }.map_err(|e| Error::InternalError(e))?;
+        let sink = unsafe { geometry.Open() }.map_err(Error::Internal)?;
         creator(&GeometryBuilder(&sink));
-        unsafe { sink.Close() }.map_err(|e| Error::InternalError(e))?;
+        unsafe { sink.Close() }.map_err(Error::Internal)?;
 
         Ok(Geometry(geometry))
     }
@@ -142,7 +141,7 @@ impl Context {
                     Ok(tf)
                 })
         }
-        .map_err(|e| Error::FontCreationError {
+        .map_err(|e| Error::FontCreation {
             face_name: face_name.to_owned(),
             source: e,
         })?;
@@ -185,7 +184,7 @@ impl RenderTarget {
                 D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE,
             )
         }
-        .map_err(|e| Error::InternalError(e))?;
+        .map_err(Error::Internal)?;
 
         Ok(Self::BitmapRenderTarget(new_rt))
     }
@@ -205,7 +204,7 @@ impl RenderTarget {
     pub fn get_bitmap(&self) -> Result<Bitmap, Error> {
         match self {
             RenderTarget::BitmapRenderTarget(rt) => {
-                let bitmap = unsafe { rt.GetBitmap() }.map_err(|e| Error::InternalError(e))?;
+                let bitmap = unsafe { rt.GetBitmap() }.map_err(Error::Internal)?;
                 Ok(Bitmap(bitmap))
             }
             _ => panic!("Cannot get bitmap from HWND render target"),
@@ -231,7 +230,7 @@ impl RenderTarget {
 
     pub fn create_solid_brush(&self, color: D2D1_COLOR_F) -> Result<Brush, Error> {
         let brush = unsafe { self.get_common().CreateSolidColorBrush(&color, None) }
-            .map_err(|e| Error::InternalError(e))?;
+            .map_err(Error::Internal)?;
         Ok(Brush::SolidColor(brush))
     }
 
@@ -295,19 +294,17 @@ impl ImageLoader {
     pub fn new() -> Result<Self, Error> {
         let result = unsafe { CoInitialize(None) };
         if result.is_err() {
-            return Err(Error::InternalError(windows::core::Error::from_hresult(
-                result,
-            )));
+            return Err(Error::Internal(windows::core::Error::from_hresult(result)));
         }
         let wic_factory: IWICImagingFactory =
             unsafe { CoCreateInstance(&CLSID_WICImagingFactory, None, CLSCTX_INPROC_SERVER) }
-                .map_err(|e| Error::InternalError(e))?;
+                .map_err(Error::Internal)?;
 
         Ok(ImageLoader { wic_factory })
     }
 
     pub fn load_bitmap(&self, file_path: &str, rt: &RenderTarget) -> Result<Bitmap, Error> {
-        let convert_error = |e: windows::core::Error| Error::BitmapLoadError {
+        let convert_error = |e: windows::core::Error| Error::BitmapLoad {
             file_path: file_path.to_owned(),
             source: e,
         };
@@ -367,7 +364,7 @@ pub struct GeometryBuilder<'a>(&'a ID2D1GeometrySink);
 
 impl<'a> GeometryBuilder<'a> {
     pub fn begin_figure(&self, point: &D2D_POINT_2F) {
-        unsafe { self.0.BeginFigure(point.clone(), D2D1_FIGURE_BEGIN_FILLED) };
+        unsafe { self.0.BeginFigure(*point, D2D1_FIGURE_BEGIN_FILLED) };
     }
 
     pub fn end_figure(&self) {
@@ -375,7 +372,7 @@ impl<'a> GeometryBuilder<'a> {
     }
 
     pub fn add_line(&self, point: &D2D_POINT_2F) {
-        unsafe { self.0.AddLine(point.clone()) };
+        unsafe { self.0.AddLine(*point) };
     }
 }
 

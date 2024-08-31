@@ -36,11 +36,11 @@ mod render;
 #[derive(thiserror::Error, Debug)]
 enum ApplicationError {
     #[error(transparent)]
-    WinError(#[from] windows::core::Error),
+    Win(#[from] windows::core::Error),
     #[error(transparent)]
-    GameError(#[from] game::Error),
+    Game(#[from] game::Error),
     #[error(transparent)]
-    RenderError(#[from] render::Error),
+    Render(#[from] render::Error),
 }
 
 fn to_cursor(handle: HANDLE) -> HCURSOR {
@@ -68,7 +68,7 @@ impl WindowData {
         match msg {
             WM_PAINT => {
                 let rt = self.render_context.get_primary_render_target(hwnd)?;
-                let result = self.game.draw(&rt);
+                let result = self.game.draw(rt);
                 if let Err(game::Error::EndDrawError) = result {
                     self.render_context.reset_primary_render_target();
                 } else {

@@ -19,7 +19,7 @@ pub struct Sight<'a, 'b> {
 
 impl Player {
     pub fn sight<'a, 'b>(&'b self, map: &'a crate::map::Map) -> Sight<'a, 'b> {
-        Sight { map, player: &self }
+        Sight { map, player: self }
     }
 }
 
