@@ -1,6 +1,10 @@
 [package]
-name = "maze3d"
-version = "0.1.0"
+name = "Random3dMaze"
+authors = ["portown <portown09@gmail.com>"]
+version = "0.2.0"
+license = "MIT"
+description = "A simple 3D maze game"
+repository = "https://github.com/portown/Random3dMaze.git"
 edition = "2021"
 
 [dependencies]
