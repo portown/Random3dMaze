@@ -20,17 +20,17 @@ impl Map {
     pub fn new(rng: &mut impl Rng, width: u32, height: u32) -> Self {
         let mut data = vec![Tile::Wall; (width * height) as usize];
 
-        for y in 2..(height - 2) {
-            for x in 2..(width - 2) {
-                if x % 2 != 0 && y % 2 != 0 {
+        for y in 1..(height - 1) {
+            for x in 1..(width - 1) {
+                if x % 2 != 1 && y % 2 != 1 {
                     continue;
                 }
                 data[(x + y * width) as usize] = Tile::Floor;
             }
         }
 
-        for y in (3..(height - 3)).step_by(2) {
-            let x = 3u32;
+        for y in (2..(height - 2)).step_by(2) {
+            let x = 2u32;
             let is_horizontal: bool = rng.gen();
             if is_horizontal {
                 let new_x: u32 = if rng.gen() { x + 1 } else { x - 1 };
@@ -41,8 +41,8 @@ impl Map {
             }
         }
 
-        for x in (5..(width - 3)).step_by(2) {
-            for y in (3..(height - 3)).step_by(2) {
+        for x in (4..(width - 2)).step_by(2) {
+            for y in (2..(height - 2)).step_by(2) {
                 let is_horizontal: bool = rng.gen();
                 if is_horizontal {
                     let new_x: u32 = x + 1;
@@ -58,10 +58,10 @@ impl Map {
             width,
             height,
             data,
-            start_x: 2,
-            start_y: 2,
-            goal_x: width - 3,
-            goal_y: height - 3,
+            start_x: 1,
+            start_y: 1,
+            goal_x: width - 2,
+            goal_y: height - 2,
         }
     }
 
