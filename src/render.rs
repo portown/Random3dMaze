@@ -5,7 +5,12 @@ use windows::{
     Win32::{
         Foundation::{COLORREF, HWND, POINT, RECT},
         Graphics::Gdi::{
-            BeginPaint, BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, CreateFontW, CreatePen, CreateSolidBrush, DeleteDC, DeleteObject, EndPaint, GetObjectW, GetStockObject, Polygon, Rectangle, SelectObject, SetTextColor, TextOutW, BITMAP, CLIP_DEFAULT_PRECIS, DEFAULT_CHARSET, DEFAULT_PITCH, DEFAULT_QUALITY, FF_DONTCARE, FW_NORMAL, HBITMAP, HBRUSH, HDC, HFONT, HPEN, NULL_BRUSH, NULL_PEN, OUT_DEFAULT_PRECIS, PAINTSTRUCT, PS_SOLID, SRCCOPY
+            BeginPaint, BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, CreateFontW, CreatePen,
+            CreateSolidBrush, DeleteDC, DeleteObject, EndPaint, GetObjectW, GetStockObject,
+            Polygon, Rectangle, SelectObject, SetTextColor, TextOutW, BITMAP, CLIP_DEFAULT_PRECIS,
+            DEFAULT_CHARSET, DEFAULT_PITCH, DEFAULT_QUALITY, FF_DONTCARE, FW_NORMAL, HBITMAP,
+            HBRUSH, HDC, HFONT, HPEN, NULL_BRUSH, NULL_PEN, OUT_DEFAULT_PRECIS, PAINTSTRUCT,
+            PS_SOLID, SRCCOPY,
         },
         System::LibraryLoader::GetModuleHandleW,
         UI::WindowsAndMessaging::{
@@ -23,9 +28,7 @@ pub enum Error {
         source: windows::core::Error,
     },
     #[error("Cannot create a font named \"{face_name}\"")]
-    FontCreationError {
-        face_name: String
-    },
+    FontCreationError { face_name: String },
 }
 
 pub struct Pen {
@@ -88,7 +91,9 @@ pub fn create_font(face_name: &str, size: i32) -> Result<Font, Error> {
         )
     };
     if handle.is_invalid() {
-        Err(Error::FontCreationError { face_name: face_name.to_owned() })
+        Err(Error::FontCreationError {
+            face_name: face_name.to_owned(),
+        })
     } else {
         Ok(Font { handle })
     }

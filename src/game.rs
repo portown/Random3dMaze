@@ -272,16 +272,16 @@ impl Game {
             surface.fill_rect(&rect_wh(mini_map_x, mini_map_y, 256, 256), &r.white_brush);
         }
 
-        surface.fill_rect(&rect_wh(0, 48 + 256 + 12, 48 * 3 + 256 * 2, 20), &r.white_brush);
+        surface.fill_rect(
+            &rect_wh(0, 48 + 256 + 12, 48 * 3 + 256 * 2, 20),
+            &r.white_brush,
+        );
         if self.is_goal {
-            let text = format!("ゴール！　スコア：{}点　リスタート：Enterキー　終了：ESCキー", self.score);
-            surface.draw_text(
-                &text,
-                20,
-                48 + 256 + 12,
-                &self.font,
-                color_rgb(0, 0, 0),
+            let text = format!(
+                "ゴール！　スコア：{}点　リスタート：Enterキー　終了：ESCキー",
+                self.score
             );
+            surface.draw_text(&text, 20, 48 + 256 + 12, &self.font, color_rgb(0, 0, 0));
         } else {
             surface.draw_text(
                 "移動：矢印キー マップ：Mキー 終了：ESCキー",

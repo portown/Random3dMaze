@@ -32,9 +32,11 @@ impl<'a, 'b> Sight<'a, 'b> {
             Direction::South => (-horizontal, forward as i32),
         };
 
-        self.map.get(
-            self.player.x.saturating_add_signed(x_diff) as i32,
-            self.player.y.saturating_add_signed(y_diff) as i32,
-        ).unwrap_or(crate::map::Tile::Wall)
+        self.map
+            .get(
+                self.player.x.saturating_add_signed(x_diff) as i32,
+                self.player.y.saturating_add_signed(y_diff) as i32,
+            )
+            .unwrap_or(crate::map::Tile::Wall)
     }
 }
