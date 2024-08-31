@@ -245,14 +245,8 @@ impl Game {
                 &r.white_brush,
                 angle,
             );
-        } else {
-            rt.fill_rect(&rect_wh(mini_map_x, mini_map_y, 256, 256), &r.white_brush);
         }
 
-        rt.fill_rect(
-            &rect_wh(0, 48 + 256 + 12, 48 * 3 + 256 * 2, 20),
-            &r.white_brush,
-        );
         if self.is_goal {
             let text = format!(
                 "ゴール！　スコア：{}点　リスタート：Enterキー　終了：ESCキー",
