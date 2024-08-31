@@ -281,7 +281,7 @@ impl Game {
 
     fn create_rendering_data(&mut self, rt: &RenderTarget) -> Result<RenderingData, Error> {
         let map_surface = rt.create_new_render_target(256, 256)?;
-        let wall_surface = self.image_loader.load_bitmap("assets\\wall.bmp", &rt)?;
+        let wall_surface = self.image_loader.load_bitmap("assets\\wall.bmp", rt)?;
         let mini_map_surface = rt.create_new_render_target(256, 256)?;
         let black_brush = rt.create_solid_brush(color_rgb(0, 0, 0))?;
         let white_brush = rt.create_solid_brush(color_rgb(255, 255, 255))?;
