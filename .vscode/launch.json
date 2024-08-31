@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'maze3d'",
+            "name": "Debug executable 'Random3dMaze'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=maze3d",
-                    "--package=maze3d"
+                    "--bin=Random3dMaze",
+                    "--package=Random3dMaze"
                 ],
                 "filter": {
-                    "name": "maze3d",
+                    "name": "Random3dMaze",
                     "kind": "bin"
                 }
             },
@@ -25,16 +25,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'maze3d'",
+            "name": "Debug unit tests in executable 'Random3dMaze'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=maze3d",
-                    "--package=maze3d"
+                    "--bin=Random3dMaze",
+                    "--package=Random3dMaze"
                 ],
                 "filter": {
-                    "name": "maze3d",
+                    "name": "Random3dMaze",
                     "kind": "bin"
                 }
             },

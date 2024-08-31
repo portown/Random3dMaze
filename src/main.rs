@@ -1,6 +1,5 @@
 #![windows_subsystem = "windows"]
 
-use render::begin_paint;
 use std::{ffi::c_void, ptr};
 use windows::{
     core::{w, HSTRING, PCWSTR},
@@ -9,7 +8,9 @@ use windows::{
             ERROR_ALREADY_EXISTS, FALSE, HANDLE, HINSTANCE, HWND, LPARAM, LRESULT, RECT,
             WIN32_ERROR, WPARAM,
         },
-        Graphics::Gdi::{GetStockObject, InvalidateRect, UpdateWindow, HBRUSH, WHITE_BRUSH},
+        Graphics::Gdi::{
+            GetStockObject, InvalidateRect, UpdateWindow, ValidateRect, HBRUSH, WHITE_BRUSH,
+        },
         System::{LibraryLoader::GetModuleHandleW, Threading::CreateMutexW},
         UI::{
             Input::KeyboardAndMouse::{
@@ -38,6 +39,8 @@ enum ApplicationError {
     WinError(#[from] windows::core::Error),
     #[error(transparent)]
     GameError(#[from] game::Error),
+    #[error(transparent)]
+    RenderError(#[from] render::Error),
 }
 
 fn to_cursor(handle: HANDLE) -> HCURSOR {
@@ -50,6 +53,7 @@ fn to_icon(handle: HANDLE) -> HICON {
 
 struct WindowData {
     game: game::Game,
+    render_context: render::Context,
     error: Option<ApplicationError>,
 }
 
@@ -63,8 +67,14 @@ impl WindowData {
     ) -> Result<LRESULT, ApplicationError> {
         match msg {
             WM_PAINT => {
-                let surface = begin_paint(hwnd);
-                self.game.draw(&surface)?;
+                let rt = self.render_context.get_primary_render_target(hwnd)?;
+                let result = self.game.draw(&rt);
+                if let Err(game::Error::EndDrawError) = result {
+                    self.render_context.reset_primary_render_target();
+                } else {
+                    result?;
+                }
+                _ = unsafe { ValidateRect(hwnd, None) };
             }
             WM_KEYDOWN => match VIRTUAL_KEY(wparam.0 as u16) {
                 VK_LEFT => {
@@ -88,7 +98,7 @@ impl WindowData {
                     _ = unsafe { InvalidateRect(hwnd, None, FALSE) };
                 }
                 VK_RETURN => {
-                    self.game = self.game.new_game()?;
+                    self.game = self.game.new_game(&self.render_context)?;
                     _ = unsafe { InvalidateRect(hwnd, None, FALSE) };
                 }
                 VK_ESCAPE => _ = unsafe { DestroyWindow(hwnd) },
@@ -180,8 +190,10 @@ fn run() -> Result<(), ApplicationError> {
         AdjustWindowRectEx(&mut window_rect, window_style, FALSE, window_ex_style)?;
     }
 
+    let render_context = render::Context::new()?;
     let mut window_data = WindowData {
-        game: game::Game::new()?,
+        game: game::Game::new(&render_context)?,
+        render_context,
         error: None,
     };
 
